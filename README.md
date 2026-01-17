@@ -1,8 +1,8 @@
 # Volatility and Covariance Baseline Lab (SPY + Liquid ETFs)
 
-TL;DR: A reproducible volatility and covariance risk pipeline for SPY + liquid ETFs: realized volatility vs GARCH forecasts, covariance fragility diagnostics (eigenvalues/condition number), explicit SPD enforcement (jitter/eigen clipping), VAR innovation covariance, and walk-forward VaR backtests with saved figures and tests.
+**TL;DR: A reproducible volatility and covariance risk pipeline for SPY + liquid ETFs: realized volatility vs GARCH forecasts, covariance fragility diagnostics (eigenvalues/condition number), explicit SPD enforcement (jitter/eigen clipping), VAR innovation covariance, and walk-forward VaR backtests with saved figures and tests.**
 
-The goal of this project is to build baseline volatility and covariance plumbing in a clean, reproducible way using Python scripts.
+*The goal of this project is to build baseline volatility and covariance plumbing in a clean, reproducible way using Python scripts.*
 
 This project's goal is not about modeling complexity or "alpha claims."  The intent is to build baseline components that a portfolio construction or systematic pipeline would consume, without making performance claims. I am trying to work through:
 - basic definitions (returns, realized volatility, sample covariance),
@@ -24,7 +24,7 @@ The project currently includes:
 - SPD regularization techniques (diagonal jitter, eigenvalue clipping) with Cholesky validation
 - Scripts with configs
 - Reproducible artifacts (figures saved to disk, deterministic paths)
-- Unit tests for SPD repair functions
+- Diagnostic validation of SPD repair methods via eigenvalue and Cholesky checks
 
 ---
 
