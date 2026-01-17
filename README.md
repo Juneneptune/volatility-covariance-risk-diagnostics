@@ -1,14 +1,16 @@
 # Volatility and Covariance Baseline Lab (SPY + Liquid ETFs)
 
+TL;DR: A reproducible volatility and covariance risk pipeline for SPY + liquid ETFs: realized volatility vs GARCH forecasts, covariance fragility diagnostics (eigenvalues/condition number), explicit SPD enforcement (jitter/eigen clipping), VAR innovation covariance, and walk-forward VaR backtests with saved figures and tests.
+
 The goal of this project is to build baseline volatility and covariance plumbing in a clean, reproducible way using Python scripts.
 
-This project's goal is not about modeling complexity or "alpha claims." Instead, I'm trying to work through:
+This project's goal is not about modeling complexity or "alpha claims."  The intent is to build baseline components that a portfolio construction or systematic pipeline would consume, without making performance claims. I am trying to work through:
 - basic definitions (returns, realized volatility, sample covariance),
 - comparisons (forecast vs realized proxy),
 - numerical diagnostics (covariance fragility),
 - project structure (scripts, configs, deterministic outputs).
 
-**Focus:** volatility and covariance as risk objects.  
+**Focus:** volatility and covariance as risk objects that are commonly used as inputs to portfolio construction and sizing.
 **Not included:** option pricing, Ito calculus, complex deep forecasting, or research-only abstractions.
 
 ---
@@ -20,7 +22,7 @@ The project currently includes:
 - Covariance treated as a potentially fragile risk object
 - Conditioning diagnostics via eigenvalues and condition number
 - SPD regularization techniques (diagonal jitter, eigenvalue clipping) with Cholesky validation
-- Scripts with configs (not notebooks)
+- Scripts with configs
 - Reproducible artifacts (figures saved to disk, deterministic paths)
 - Unit tests for SPD repair functions
 
@@ -44,7 +46,11 @@ spy-volatility-clustering-and-garch/
 │           ├── SPY_GARCH11_VS_RV21.png
 │           ├── prices_covariance_fragility.png
 │           ├── regularized_covariance_condition_number.png
-│           └── rolling_vs_var_cov_diagnostics.png
+│           ├── rolling_vs_var_cov_diagnostics.png
+│           ├── var_garch_99.png
+│           ├── var_lruc_table.png
+│           ├── exceedance_clustering.png
+│           └── vol_regimes_diagnostic.png
 │
 ├── datasets/                   # Additional datasets (if any)
 │
@@ -58,7 +64,9 @@ spy-volatility-clustering-and-garch/
 │   ├── fit_garch.py
 │   ├── fit_var.py
 │   ├── diagnose_covariance.py
-│   └── regulate_covariance.py
+│   ├── regulate_covariance.py
+│   ├── walkforward_var.py
+│   └── volatility_regime_diagnostic.py
 │
 ├── tests/                      # Unit tests
 │   └── test_spd.py
@@ -107,12 +115,12 @@ pip install -e .
 
 ### Dependencies
 
-- `pandas`, `numpy` (core)
-- `matplotlib` (plots saved to disk)
-- `yfinance` (data)
-- `arch` (GARCH)
-- `statsmodels` (future VAR work)
-- `pyyaml` (configs)
+- `pandas`, `numpy` 
+- `matplotlib`
+- `yfinance`
+- `arch`
+- `statsmodels`
+- `pyyaml`
 
 ---
 
@@ -216,7 +224,7 @@ python scripts/regulate_covariance.py
 
 ![Regularized Covariance Condition Number](data/outputs/figures/regularized_covariance_condition_number.png)
 
-**Key insight:** In practical risk systems, the primary challenge is not estimating covariance, but making it numerically usable. Diagonal jitter stabilizes near-singular matrices by shifting the spectrum upward, while eigenvalue clipping enforces a hard lower bound and guarantees SPD by construction.
+**Key insight:** in practice, numerical usability can be as important as estimation, especially in stressed regimes. Diagonal jitter stabilizes near-singular matrices by shifting the spectrum upward, while eigenvalue clipping enforces a hard lower bound and guarantees SPD by construction.
 
 ### 5) VAR(1) innovation covariance vs rolling sample covariance
 
@@ -232,6 +240,52 @@ python scripts/fit_var.py
 **Results:** Compared to rolling sample covariance, the VAR(1) innovation covariance exhibits a smaller condition number with a reduced largest eigenvalue and an elevated smallest eigenvalue, indicating improved conditioning after removing linear temporal dependence in the conditional mean.
 
 ![Rolling vs VAR Covariance Diagnostics](data/outputs/figures/rolling_vs_var_cov_diagnostics.png)
+
+### 6) Walk-forward VaR evaluation
+
+One-day VaR forecasts for SPY were evaluated using both realized volatility and GARCH(1,1) conditional volatility estimates under Gaussian and Student-t distributional assumptions at the 1% and 5% levels. The analysis was conducted in a walk-forward manner to avoid lookahead bias.
+
+```bash
+python scripts/walkforward_var.py
+```
+
+**Outputs:**
+- `data/outputs/figures/var_garch_99.png`
+- `data/outputs/figures/var_lruc_table.png`
+- `data/outputs/figures/exceedance_clustering.png`
+
+**Results:** The walk-forward VaR evaluation provides a comprehensive assessment of forecast accuracy across different volatility models and distributional assumptions.
+
+![GARCH VaR Backtest](data/outputs/figures/var_garch_99.png)
+
+In the 99% GARCH VaR backtest, extreme exceedances appear to occur primarily during periods of elevated market volatility. While some exceedances are temporally proximate, the limited number of 1% violations makes it difficult to draw strong conclusions regarding tail clustering based on visual inspection alone.
+
+![Kupiec LRuc Test Results](data/outputs/figures/var_lruc_table.png)
+
+When comparing volatility models, GARCH-based VaR forecasts tend to show improved coverage relative to realized-volatility-based VaR. This behavior is consistent with the expectation that the GARCH(1,1) structure introduces smoother and more adaptive volatility estimates through its recursive variance dynamics, whereas rolling realized volatility responds more slowly to changes in volatility regimes.
+
+Examining empirical exceedance rates and Kupiec unconditional coverage test results, Gaussian-based VaR forecasts appear to be more conservative in this setting, with exceedance frequencies closer to nominal levels. Student-t VaR, implemented with a fixed degrees-of-freedom parameter (ν = 8), exhibits low p-values in several cases, which may indicate miscalibration under this specific tail parameterization rather than an absence of fat-tailed behavior in equity returns. These results are therefore conditional on the chosen ν and should not be interpreted as a general rejection of heavy-tailed models.
+
+![Exceedance Clustering](data/outputs/figures/exceedance_clustering.png)
+
+Finally, rolling exceedance rates at the 5% level using a 63-day window suggest only mild persistence in VaR violations for the GARCH-Gaussian model. This may reflect the extent to which volatility clustering in returns is already absorbed by the conditional variance dynamics, although the rolling diagnostic is intended as an exploratory visualization rather than a formal test of independence.
+
+### 7) Volatility regime covariance diagnostics
+
+The goal is to examine how covariance conditioning varies across volatility regimes by using SPY realized volatility as a simple regime indicator.
+
+```bash
+python scripts/volatility_regime_diagnostic.py
+```
+
+**Output:**
+- `data/outputs/figures/vol_regimes_diagnostic.png`
+
+**Results:** This analysis examines the relationship between volatility regimes and covariance fragility by labeling periods of high volatility (using the 70th percentile of SPY realized volatility) and tracking the condition number of rolling covariance matrices across these regimes.
+
+![Volatility Regime Diagnostics](data/outputs/figures/vol_regimes_diagnostic.png)
+
+Using SPY realized volatility as a simple regime indicator, I find that rolling covariance matrices tend to become poorly conditioned during high-volatility periods. In these regimes, the condition number increases as the dominant eigenvalue expands and the smallest eigenvalues compress, consistent with assets moving more closely together. This does not imply causality, but it highlights a practical risk issue: covariance estimates are most fragile precisely when markets are volatile, which is why explicit SPD enforcement and regime-aware diagnostics are important in practice.
 
 ---
 
@@ -249,6 +303,10 @@ The project follows a progression that builds understanding of volatility and co
 
 5. **VAR innovation covariance comparison**: We fit a VAR(1) model and compare the innovation covariance to rolling sample covariance. Compared to rolling sample covariance, the VAR(1) innovation covariance exhibits a smaller condition number with a reduced largest eigenvalue and an elevated smallest eigenvalue, indicating improved conditioning after removing linear temporal dependence in the conditional mean.
 
+6. **Walk-forward VaR evaluation**: We evaluate one-day VaR forecasts using both realized volatility and GARCH(1,1) conditional volatility under Gaussian and Student-t assumptions. The walk-forward analysis shows that GARCH-based VaR tends to provide improved coverage relative to realized-volatility-based VaR, consistent with the GARCH structure's adaptive volatility dynamics. The Kupiec unconditional coverage tests and rolling exceedance diagnostics provide complementary assessments of forecast calibration and violation clustering.
+
+7. **Volatility regime covariance diagnostics**: We examine how covariance conditioning varies across volatility regimes by using SPY realized volatility as a regime indicator. The analysis reveals that rolling covariance matrices become poorly conditioned during high-volatility periods, with condition numbers spiking when assets move more closely together. This highlights the practical risk issue that covariance estimates are most fragile precisely when markets are volatile, emphasizing the importance of explicit SPD enforcement and regime-aware diagnostics.
+
 ## Key concepts
 
 ### Forecast vs realized proxy
@@ -265,7 +323,7 @@ The goal here is to understand that even for liquid ETFs, rolling sample covaria
 - **Diagonal jitter**: Stabilizes near-singular matrices by shifting the spectrum upward through a small diagonal addition.
 - **Eigenvalue clipping**: Enforces a hard lower bound on eigenvalues and guarantees SPD by construction through eigendecomposition and reconstruction.
 
-Both techniques are validated via Cholesky decomposition tests to ensure matrices are numerically usable. This is why production systems typically require SPD enforcement and numerical repairs before using covariance in risk allocation or optimization.
+Both techniques are validated via Cholesky decomposition tests to ensure matrices are numerically usable. SPD enforcement and numerical repairs seem useful before using covariance in risk allocation or optimization.
 
 ---
 
@@ -281,7 +339,6 @@ A few organizational choices I made:
 ## Next steps (planned)
 
 Some things I'd like to add:
-- Walk-forward evaluation (required before performance claims)
 - Minimal risk application (vol targeting / risk parity) with turnover reporting
 - Extended testing of regularization techniques on various market conditions
 

@@ -5,6 +5,9 @@ def compute_returns(
     prices: pd.DataFrame,
     price_col: list = ["SPY_Adj_Close"],
 ) -> pd.DataFrame:
+
+    if isinstance(price_col, str):
+        price_col = [price_col]
     # Find stock name
     for c in price_col:
         ticker = c.split("_")[0]

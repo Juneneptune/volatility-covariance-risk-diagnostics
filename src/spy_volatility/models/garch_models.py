@@ -18,7 +18,7 @@ def fit_garch_11(
     not a walk-forward forecast.
     """
     garch = arch_model(
-        100 * returns,
+        100 * returns,  # Scaled by 100 for stable modeling (will be removed later)
         mean = "Constant",
         vol = "GARCH",
         p = 1,
