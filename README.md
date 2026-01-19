@@ -31,7 +31,7 @@ The project currently includes:
 ## Repo structure
 
 ```
-spy-volatility-clustering-and-garch/
+volatility-covariance-risk-diagnostic/
 ├── configs/                    # Configuration files
 │   ├── default.yaml           # single-asset (SPY)
 │   └── default_multivar.yaml  # multivariate prices for covariance diagnostics
