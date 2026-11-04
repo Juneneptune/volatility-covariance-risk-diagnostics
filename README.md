@@ -4,15 +4,9 @@
 
 *The goal of this project is to build baseline volatility and covariance plumbing in a clean, reproducible way using Python scripts.*
 
-This project's goal is not about modeling complexity or "alpha claims."  The intent is to build baseline components that a portfolio construction or systematic pipeline would consume, without making performance claims. I am trying to work through:
-- basic definitions (returns, realized volatility, sample covariance),
-- comparisons (forecast vs realized proxy),
-- numerical diagnostics (covariance fragility),
-- project structure (scripts, configs, deterministic outputs).
+*Baseline volatility and covariance risk tools for SPY and liquid sector ETFs, built as reproducible Python scripts.*
 
-**Focus:** volatility and covariance as risk objects that are commonly used as inputs to portfolio construction and sizing.
-**Not included:** option pricing, Ito calculus, complex deep forecasting, or research-only abstractions.
-
+The project treats volatility and covariance as risk inputs to portfolio construction and sizing. It compares forecasts with realized proxies, checks how fragile estimated covariance matrices are, and backtests the risk numbers built from them. It makes no performance or alpha claims.
 ---
 
 ## What this project includes
