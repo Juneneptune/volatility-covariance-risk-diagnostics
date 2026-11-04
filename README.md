@@ -7,6 +7,7 @@
 *Baseline volatility and covariance risk tools for SPY and liquid sector ETFs, built as reproducible Python scripts.*
 
 The project treats volatility and covariance as risk inputs to portfolio construction and sizing. It compares forecasts with realized proxies, checks how fragile estimated covariance matrices are, and backtests the risk numbers built from them. It makes no performance or alpha claims.
+
 ---
 
 ## What this project includes
